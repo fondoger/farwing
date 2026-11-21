@@ -96,6 +96,11 @@ pub(crate) fn preflight() -> Result<()> {
     Ok(())
 }
 pub(crate) fn execute(operation: Operation) -> Result<bool> {
+    ensure!(
+        operation != Operation::Install
+            || crate::platform::windows::components::bundled_drivers_supported(),
+        "内置虚拟音频驱动仅支持 Windows x64，ARM64 暂不支持"
+    );
     idle()?;
     match operation {
         Operation::Install => {

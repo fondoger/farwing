@@ -1,5 +1,6 @@
 //! Windows OS and GPU drivers. No account/session ownership in this layer.
 mod adapter_type;
+#[cfg(target_arch = "x86_64")]
 pub(crate) mod amf;
 pub(crate) mod annotation;
 pub(crate) mod assist_link;
@@ -26,10 +27,13 @@ pub(crate) mod input;
 pub(crate) mod loopback;
 pub(crate) mod mmcss;
 pub(crate) mod notifications;
+#[cfg(target_arch = "x86_64")]
 pub(crate) mod nvenc;
 pub(crate) mod power_request;
 pub(crate) mod preprocess;
+#[cfg(target_arch = "x86_64")]
 pub(crate) mod qsv;
+#[cfg(target_arch = "x86_64")]
 pub(crate) mod qsv_allocator;
 pub(crate) mod registry;
 mod software_encoder;

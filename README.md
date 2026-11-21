@@ -83,6 +83,14 @@ cargo dist
 
 产物为 `target/dist/` 下的单文件 EXE。仅构建原生 EXE 可用 `cargo dist --native`；命令行参数见 `--help`。
 
+### Windows ARM64
+
+在 Windows ARM64 上安装原生 ARM64 Rust MSVC 工具链、Visual Studio ARM64 C++ 构建工具和 Windows SDK，运行 `cargo dist --native`。产物为 `target/dist/native/OpenUUYC-v<版本>-windows-aarch64.exe`，包含现有的安装与更新入口；压缩启动器目前仅支持 x64。
+
+GitHub Actions 的 `Windows ARM64 release` 工作流在 `windows-11-arm` 上构建，验证 EXE 架构、应用清单和启动输出，并保存 EXE、对应源码及 SHA-256 校验值。推送 `v*` 标签会发布到当前仓库的 Releases；手动运行可只生成构建产物，也可通过 `release_tag` 发布。
+
+ARM64 保留 D3D11 硬件解码与软件 H.264 编码，暂不提供 NVENC、AMF、QSV 硬件编码和软件 AV1 解码。内置输入、虚拟显示和虚拟音频驱动仅支持 x64，ARM64 安装服务时会跳过这些驱动。主控连接远端设备不要求在主控安装这些驱动；实际编解码能力仍取决于本机显卡、驱动及远端协商结果。
+
 源码已包含签名驱动包和公钥证书，构建主程序不需要签名私钥。修改驱动及发布前验证见 [驱动构建说明](drivers/README.md)。
 
 ## 命令行更新

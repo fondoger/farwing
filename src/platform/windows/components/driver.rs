@@ -350,6 +350,11 @@ impl Package {
         })
     }
     pub fn install(&self) -> Result<bool> {
+        ensure!(
+            super::bundled_drivers_supported(),
+            "内置{}仅支持 Windows x64，ARM64 暂不支持",
+            self.kind.label()
+        );
         let (set, nodes) = self.nodes()?;
         ensure!(nodes.len() <= 1, "存在多个{}设备", self.kind.label());
         let created = nodes.is_empty();

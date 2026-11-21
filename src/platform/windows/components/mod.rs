@@ -6,6 +6,11 @@ pub(crate) mod migration;
 pub(crate) mod suite;
 use anyhow::{Context, Result, ensure};
 use std::sync::atomic::{AtomicBool, Ordering};
+
+// The embedded driver packages currently contain only AMD64 binaries and INFs.
+pub(crate) const fn bundled_drivers_supported() -> bool {
+    cfg!(target_arch = "x86_64")
+}
 use windows::{
     Win32::{
         Foundation::*,

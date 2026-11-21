@@ -20,8 +20,11 @@ pub(crate) fn probe(
     let adapter =
         (u64::from(desc.AdapterLuid.HighPart as u32) << 32) | u64::from(desc.AdapterLuid.LowPart);
     let mut candidates = Vec::new();
+    #[cfg(target_arch = "x86_64")]
     let mut adapters = super::capture::encoding_adapters()?;
+    #[cfg(target_arch = "x86_64")]
     adapters.sort_by_key(|candidate| candidate.luid != adapter);
+    #[cfg(target_arch = "x86_64")]
     for candidate in adapters {
         let luid = candidate.luid;
         let backend = match candidate.vendor {
@@ -248,8 +251,11 @@ impl Drop for Runtime {
 pub(crate) use crate::media::encoding::{Encoded, FrameTiming};
 
 pub(crate) enum Encoder {
+    #[cfg(target_arch = "x86_64")]
     Nvidia(super::nvenc::Encoder),
+    #[cfg(target_arch = "x86_64")]
     Amd(super::amf::Encoder),
+    #[cfg(target_arch = "x86_64")]
     Intel(super::qsv::Encoder),
     Software(Box<super::software_encoder::Encoder>),
 }
@@ -262,7 +268,10 @@ impl Encoder {
         rate: super::format::Rate,
         color: super::format::Color,
     ) -> Result<bool> {
+        #[cfg(not(target_arch = "x86_64"))]
+        let _ = (device, size, format, rate, color);
         match self {
+            #[cfg(target_arch = "x86_64")]
             Self::Intel(encoder) => encoder.reconfigure_stream(device, size, format, rate, color),
             _ => Ok(false),
         }
@@ -274,6 +283,12 @@ impl Encoder {
         rate: super::format::Rate,
         color: super::format::Color,
     ) -> Result<Self> {
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            let _ = (device, size, format, rate, color);
+            anyhow::bail!("此架构暂不支持硬件编码，请使用软件 H.264 编码");
+        }
+        #[cfg(target_arch = "x86_64")]
         unsafe {
             let dxgi: windows::Win32::Graphics::Dxgi::IDXGIDevice = device.cast()?;
             let desc = dxgi.GetAdapter()?.GetDesc()?;
@@ -303,24 +318,33 @@ impl Encoder {
     }
     pub(crate) fn implementation(&self) -> i32 {
         match self {
+            #[cfg(target_arch = "x86_64")]
             Self::Nvidia(_) => 0,
+            #[cfg(target_arch = "x86_64")]
             Self::Amd(_) => 1,
+            #[cfg(target_arch = "x86_64")]
             Self::Intel(_) => 2,
             Self::Software(_) => 5,
         }
     }
     pub(crate) fn maximum_size(&self) -> (u32, u32) {
         match self {
+            #[cfg(target_arch = "x86_64")]
             Self::Nvidia(e) => e.maximum_size(),
+            #[cfg(target_arch = "x86_64")]
             Self::Amd(e) => e.maximum_size(),
+            #[cfg(target_arch = "x86_64")]
             Self::Intel(e) => e.maximum_size(),
             Self::Software(encoder) => encoder.maximum_size(),
         }
     }
     pub(crate) fn configure_rate(&mut self, rate: super::format::Rate) -> Result<bool> {
         match self {
+            #[cfg(target_arch = "x86_64")]
             Self::Nvidia(e) => e.configure_rate(rate),
+            #[cfg(target_arch = "x86_64")]
             Self::Amd(e) => e.configure(rate),
+            #[cfg(target_arch = "x86_64")]
             Self::Intel(e) => e.configure(rate),
             Self::Software(encoder) => encoder.configure(rate),
         }
@@ -345,8 +369,12 @@ impl Encoder {
         keyframe: bool,
         cancel: &std::sync::Arc<std::sync::atomic::AtomicBool>,
     ) -> Result<Vec<Encoded>> {
-        if keyframe && let Self::Software(e) = self {
-            e.request_keyframe();
+        if keyframe {
+            match self {
+                Self::Software(e) => e.request_keyframe(),
+                #[cfg(target_arch = "x86_64")]
+                _ => (),
+            }
         }
         ensure!(
             !cancel.load(std::sync::atomic::Ordering::Acquire),
@@ -354,8 +382,11 @@ impl Encoder {
         );
         match self {
             Self::Software(e) => e.encode(texture, timestamp, keyframe, cancel),
+            #[cfg(target_arch = "x86_64")]
             Self::Nvidia(e) => e.encode(texture, timestamp, keyframe),
+            #[cfg(target_arch = "x86_64")]
             Self::Amd(e) => e.encode(texture, timestamp, keyframe, cancel),
+            #[cfg(target_arch = "x86_64")]
             Self::Intel(e) => e.encode(texture, timestamp, keyframe, cancel),
         }
     }

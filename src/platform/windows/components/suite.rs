@@ -29,10 +29,13 @@ pub(crate) fn status() -> Result<Status> {
     let complete = installed
         && vault::applies()?
         && service.ready
-        && super::super::input::install::status()?.ready
-        && super::super::display::install::status()?.ready;
+        && (!super::bundled_drivers_supported()
+            || (super::super::input::install::status()?.ready
+                && super::super::display::install::status()?.ready));
     Ok(Status {
-        label: if complete {
+        label: if complete && !super::bundled_drivers_supported() {
+            "服务已安装，ARM64 虚拟驱动暂不支持".into()
+        } else if complete {
             "服务已安装".into()
         } else if installed {
             "服务需要完成安装或更新".into()
@@ -58,21 +61,25 @@ pub(crate) fn execute(
             });
             ensure!(record.owner == owner, "此服务由另一 Windows 用户管理");
             host_service::install::preflight()?;
-            super::super::display::install::preflight(Operation::Install)?;
+            if super::bundled_drivers_supported() {
+                super::super::display::install::preflight(Operation::Install)?;
+            }
             vault::create(owner)?;
             let mut reboot = host_service::install::install(allow_sas)?;
             let configured = (|| -> Result<bool> {
                 save(&record)?;
-                let input = super::super::input::install::status()?;
-                if !input.ready {
-                    reboot |= super::super::input::install::install()?;
-                }
-                let display = super::super::display::install::status()?;
-                if !display.ready {
-                    reboot |= super::super::display::install::install()?;
-                }
-                if super::super::virtual_audio::install::needs_package_update()? {
-                    reboot |= super::super::virtual_audio::install::execute(Operation::Install)?;
+                if super::bundled_drivers_supported() {
+                    let input = super::super::input::install::status()?;
+                    if !input.ready {
+                        reboot |= super::super::input::install::install()?;
+                    }
+                    let display = super::super::display::install::status()?;
+                    if !display.ready {
+                        reboot |= super::super::display::install::install()?;
+                    }
+                    if super::super::virtual_audio::install::needs_package_update()? {
+                        reboot |= super::super::virtual_audio::install::execute(Operation::Install)?;
+                    }
                 }
                 super::migration::begin()?;
                 Ok(reboot)
